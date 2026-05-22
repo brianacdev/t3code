@@ -2,11 +2,44 @@ import { describe, expect, it } from "vitest";
 import * as Schema from "effect/Schema";
 
 import { ProviderInstanceId } from "./providerInstance.ts";
-import { DEFAULT_SERVER_SETTINGS, ServerSettings, ServerSettingsPatch } from "./settings.ts";
+import {
+  ClientSettingsPatch,
+  ClientSettingsSchema,
+  DEFAULT_SERVER_SETTINGS,
+  ServerSettings,
+  ServerSettingsPatch,
+} from "./settings.ts";
 
 const decodeServerSettings = Schema.decodeUnknownSync(ServerSettings);
 const decodeServerSettingsPatch = Schema.decodeUnknownSync(ServerSettingsPatch);
 const encodeServerSettings = Schema.encodeSync(ServerSettings);
+const decodeClientSettings = Schema.decodeUnknownSync(ClientSettingsSchema);
+const decodeClientSettingsPatch = Schema.decodeUnknownSync(ClientSettingsPatch);
+
+describe("ClientSettings.promptSubmitShortcut", () => {
+  it("defaults legacy client settings to Enter submit", () => {
+    expect(decodeClientSettings({}).promptSubmitShortcut).toBe("enter");
+  });
+
+  it("accepts valid patch values", () => {
+    expect(decodeClientSettingsPatch({ promptSubmitShortcut: "enter" }).promptSubmitShortcut).toBe(
+      "enter",
+    );
+    expect(
+      decodeClientSettingsPatch({ promptSubmitShortcut: "shift-enter" }).promptSubmitShortcut,
+    ).toBe("shift-enter");
+    expect(
+      decodeClientSettingsPatch({ promptSubmitShortcut: "meta-enter" }).promptSubmitShortcut,
+    ).toBe("meta-enter");
+    expect(
+      decodeClientSettingsPatch({ promptSubmitShortcut: "ctrl-enter" }).promptSubmitShortcut,
+    ).toBe("ctrl-enter");
+  });
+
+  it("rejects invalid patch values", () => {
+    expect(() => decodeClientSettingsPatch({ promptSubmitShortcut: "cmd-enter" })).toThrow();
+  });
+});
 
 describe("ServerSettings.providerInstances (slice-2 invariant)", () => {
   it("defaults to an empty record so legacy configs without the key still decode", () => {

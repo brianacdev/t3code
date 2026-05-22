@@ -5,6 +5,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import {
   defaultInstanceIdForDriver,
   type DesktopUpdateChannel,
+  type PromptSubmitShortcut,
   PROVIDER_DISPLAY_NAMES,
   ProviderDriverKind,
   type ProviderInstanceConfig,
@@ -98,6 +99,17 @@ const TIMESTAMP_FORMAT_LABELS = {
   "12-hour": "12-hour",
   "24-hour": "24-hour",
 } as const;
+
+const PROMPT_SUBMIT_SHORTCUT_LABELS: Record<PromptSubmitShortcut, string> = {
+  enter: "Enter",
+  "shift-enter": "Shift+Enter",
+  "meta-enter": "Meta+Enter",
+  "ctrl-enter": "Ctrl+Enter",
+};
+
+const PROMPT_SUBMIT_SHORTCUT_OPTIONS = Object.entries(PROMPT_SUBMIT_SHORTCUT_LABELS) as Array<
+  [PromptSubmitShortcut, string]
+>;
 
 const DEFAULT_DRIVER_KIND = ProviderDriverKind.make("codex");
 
@@ -393,6 +405,9 @@ export function useSettingsRestore(onRestored?: () => void) {
       ...(settings.timestampFormat !== DEFAULT_UNIFIED_SETTINGS.timestampFormat
         ? ["Time format"]
         : []),
+      ...(settings.promptSubmitShortcut !== DEFAULT_UNIFIED_SETTINGS.promptSubmitShortcut
+        ? ["Submit prompt"]
+        : []),
       ...(settings.sidebarThreadPreviewCount !== DEFAULT_UNIFIED_SETTINGS.sidebarThreadPreviewCount
         ? ["Visible threads"]
         : []),
@@ -437,6 +452,7 @@ export function useSettingsRestore(onRestored?: () => void) {
       settings.diffWordWrap,
       settings.automaticGitFetchInterval,
       settings.enableAssistantStreaming,
+      settings.promptSubmitShortcut,
       settings.sidebarThreadPreviewCount,
       settings.timestampFormat,
       theme,
@@ -456,6 +472,7 @@ export function useSettingsRestore(onRestored?: () => void) {
     setTheme("system");
     updateSettings({
       timestampFormat: DEFAULT_UNIFIED_SETTINGS.timestampFormat,
+      promptSubmitShortcut: DEFAULT_UNIFIED_SETTINGS.promptSubmitShortcut,
       diffWordWrap: DEFAULT_UNIFIED_SETTINGS.diffWordWrap,
       diffIgnoreWhitespace: DEFAULT_UNIFIED_SETTINGS.diffIgnoreWhitespace,
       sidebarThreadPreviewCount: DEFAULT_UNIFIED_SETTINGS.sidebarThreadPreviewCount,
@@ -587,6 +604,51 @@ export function GeneralSettingsPanel() {
                 <SelectItem hideIndicator value="24-hour">
                   {TIMESTAMP_FORMAT_LABELS["24-hour"]}
                 </SelectItem>
+              </SelectPopup>
+            </Select>
+          }
+        />
+
+        <SettingsRow
+          title="Submit prompt"
+          description="Choose which Enter shortcut sends a prompt."
+          resetAction={
+            settings.promptSubmitShortcut !== DEFAULT_UNIFIED_SETTINGS.promptSubmitShortcut ? (
+              <SettingResetButton
+                label="submit prompt"
+                onClick={() =>
+                  updateSettings({
+                    promptSubmitShortcut: DEFAULT_UNIFIED_SETTINGS.promptSubmitShortcut,
+                  })
+                }
+              />
+            ) : null
+          }
+          control={
+            <Select
+              value={settings.promptSubmitShortcut}
+              onValueChange={(value) => {
+                if (
+                  value === "enter" ||
+                  value === "shift-enter" ||
+                  value === "meta-enter" ||
+                  value === "ctrl-enter"
+                ) {
+                  updateSettings({ promptSubmitShortcut: value });
+                }
+              }}
+            >
+              <SelectTrigger className="w-full sm:w-40" aria-label="Submit prompt shortcut">
+                <SelectValue>
+                  {PROMPT_SUBMIT_SHORTCUT_LABELS[settings.promptSubmitShortcut]}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectPopup align="end" alignItemWithTrigger={false}>
+                {PROMPT_SUBMIT_SHORTCUT_OPTIONS.map(([value, label]) => (
+                  <SelectItem hideIndicator key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
               </SelectPopup>
             </Select>
           }

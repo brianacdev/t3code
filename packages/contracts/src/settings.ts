@@ -13,6 +13,15 @@ export const TimestampFormat = Schema.Literals(["locale", "12-hour", "24-hour"])
 export type TimestampFormat = typeof TimestampFormat.Type;
 export const DEFAULT_TIMESTAMP_FORMAT: TimestampFormat = "locale";
 
+export const PromptSubmitShortcut = Schema.Literals([
+  "enter",
+  "shift-enter",
+  "meta-enter",
+  "ctrl-enter",
+]);
+export type PromptSubmitShortcut = typeof PromptSubmitShortcut.Type;
+export const DEFAULT_PROMPT_SUBMIT_SHORTCUT: PromptSubmitShortcut = "enter";
+
 export const SidebarProjectSortOrder = Schema.Literals(["updated_at", "created_at", "manual"]);
 export type SidebarProjectSortOrder = typeof SidebarProjectSortOrder.Type;
 export const DEFAULT_SIDEBAR_PROJECT_SORT_ORDER: SidebarProjectSortOrder = "updated_at";
@@ -73,6 +82,9 @@ export const ClientSettingsSchema = Schema.Struct({
       modelOrder: Schema.Array(Schema.String).pipe(Schema.withDecodingDefault(Effect.succeed([]))),
     }),
   ).pipe(Schema.withDecodingDefault(Effect.succeed({}))),
+  promptSubmitShortcut: PromptSubmitShortcut.pipe(
+    Schema.withDecodingDefault(Effect.succeed(DEFAULT_PROMPT_SUBMIT_SHORTCUT)),
+  ),
   sidebarProjectGroupingMode: SidebarProjectGroupingMode.pipe(
     Schema.withDecodingDefault(Effect.succeed(DEFAULT_SIDEBAR_PROJECT_GROUPING_MODE)),
   ),
@@ -501,6 +513,7 @@ export const ClientSettingsPatch = Schema.Struct({
       }),
     ),
   ),
+  promptSubmitShortcut: Schema.optionalKey(PromptSubmitShortcut),
   sidebarProjectGroupingMode: Schema.optionalKey(SidebarProjectGroupingMode),
   sidebarProjectGroupingOverrides: Schema.optionalKey(
     Schema.Record(TrimmedNonEmptyString, SidebarProjectGroupingMode),

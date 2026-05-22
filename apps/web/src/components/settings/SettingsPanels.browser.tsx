@@ -32,6 +32,7 @@ import {
 } from "@tanstack/react-router";
 
 import { __resetLocalApiForTests } from "../../localApi";
+import { __resetClientSettingsPersistenceForTests } from "../../hooks/useSettings";
 import { AppAtomRegistryProvider, resetAppAtomRegistryForTests } from "../../rpc/atomRegistry";
 import { resetServerStateForTests, setServerConfigSnapshot } from "../../rpc/serverState";
 import { useUiStateStore } from "../../uiStateStore";
@@ -479,6 +480,7 @@ describe("GeneralSettingsPanel observability", () => {
   beforeEach(async () => {
     resetServerStateForTests();
     await __resetLocalApiForTests();
+    __resetClientSettingsPersistenceForTests();
     localStorage.clear();
     useUiStateStore.setState({ defaultAdvertisedEndpointKey: null });
     authAccessHarness.reset();
@@ -497,6 +499,7 @@ describe("GeneralSettingsPanel observability", () => {
     document.body.innerHTML = "";
     resetServerStateForTests();
     await __resetLocalApiForTests();
+    __resetClientSettingsPersistenceForTests();
     authAccessHarness.reset();
   });
 
@@ -759,6 +762,33 @@ describe("GeneralSettingsPanel observability", () => {
         ),
       )
       .toBeInTheDocument();
+  });
+
+  it("renders and persists prompt submit shortcut", async () => {
+    const setClientSettings = vi.fn().mockResolvedValue(undefined);
+    window.nativeApi = {
+      persistence: {
+        getClientSettings: vi.fn().mockResolvedValue(null),
+        setClientSettings,
+      },
+    } as unknown as LocalApi;
+    setServerConfigSnapshot(createBaseServerConfig());
+
+    mounted = await renderWithTestRouter(
+      <AppAtomRegistryProvider>
+        <GeneralSettingsPanel />
+      </AppAtomRegistryProvider>,
+    );
+
+    await expect.element(page.getByText("Submit prompt")).toBeInTheDocument();
+    await page.getByLabelText("Submit prompt shortcut").click();
+    await page.getByText("Shift+Enter", { exact: true }).click();
+
+    await vi.waitFor(() => {
+      expect(setClientSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ promptSubmitShortcut: "shift-enter" }),
+      );
+    });
   });
 
   it("creates and shows a pairing link when network access is enabled", async () => {
