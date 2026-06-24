@@ -441,6 +441,7 @@ export interface ChatComposerProps {
   activeThread: Thread | undefined;
   isServerThread: boolean;
   isLocalDraftThread: boolean;
+  activeProjectName: string | undefined;
 
   // Session phase
   phase: SessionPhase;
@@ -556,6 +557,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     activeThread,
     isServerThread: _isServerThread,
     isLocalDraftThread: _isLocalDraftThread,
+    activeProjectName,
     phase,
     isConnecting,
     isSendBusy,
@@ -1767,12 +1769,12 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
         nudgeComposerMenuHighlight("ArrowUp");
         return true;
       }
-      if ((key === "Enter" || key === "Tab") && selectedItem) {
+      if ((key === "Tab" || (key === "Enter" && event.shiftKey)) && selectedItem) {
         onSelectComposerItem(selectedItem);
         return true;
       }
     }
-    if (key === "Enter" && !event.shiftKey) {
+    if (key === "Enter" && event.shiftKey) {
       submitComposer();
       return true;
     }
@@ -2279,6 +2281,12 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                 />
               </div>
             )}
+
+            {activeProjectName ? (
+              <div className="mb-2 truncate text-xs font-medium text-muted-foreground/80">
+                {activeProjectName}
+              </div>
+            ) : null}
 
             {!isComposerCollapsedMobile &&
               !isComposerApprovalState &&

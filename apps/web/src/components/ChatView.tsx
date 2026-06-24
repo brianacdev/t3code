@@ -4789,6 +4789,7 @@ function ChatViewContent(props: ChatViewProps) {
                     activeThread={activeThread}
                     isServerThread={isServerThread}
                     isLocalDraftThread={isLocalDraftThread}
+                    activeProjectName={activeProject?.title}
                     phase={phase}
                     isConnecting={isConnecting}
                     isSendBusy={isSendBusy}
