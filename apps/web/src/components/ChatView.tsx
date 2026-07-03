@@ -5179,6 +5179,7 @@ function ChatViewContent(props: ChatViewProps) {
                       providerStatuses={providerStatuses as ServerProvider[]}
                       activeProjectDefaultModelSelection={activeProject?.defaultModelSelection}
                       activeThreadModelSelection={activeThread?.modelSelection}
+                      activeProjectTitle={activeProject?.title}
                       activeThreadActivities={activeThread?.activities}
                       resolvedTheme={resolvedTheme}
                       settings={settings}

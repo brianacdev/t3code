@@ -40,6 +40,7 @@ import {
   collapseExpandedComposerCursor,
   detectComposerTrigger,
   expandCollapsedComposerCursor,
+  isComposerSubmitKey,
   replaceTextRange,
 } from "../../composer-logic";
 import { deriveComposerSendState, readFileAsDataUrl } from "../ChatView.logic";
@@ -486,6 +487,7 @@ export interface ChatComposerProps {
   providerStatuses: ServerProvider[];
   activeProjectDefaultModelSelection: ModelSelection | null | undefined;
   activeThreadModelSelection: ModelSelection | null | undefined;
+  activeProjectTitle: string | null | undefined;
 
   // Context window
   activeThreadActivities: Thread["activities"] | undefined;
@@ -578,6 +580,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     providerStatuses,
     activeProjectDefaultModelSelection,
     activeThreadModelSelection,
+    activeProjectTitle,
     activeThreadActivities,
     resolvedTheme,
     settings,
@@ -1137,6 +1140,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
   const collapsedComposerPrimaryActionDisabled =
     phase === "running" || isSendBusy || isConnecting || !composerSendState.hasSendableContent;
   const collapsedComposerPrimaryActionLabel = "Send message";
+  const composerProjectLabel = activeProjectTitle?.trim() || "-";
   const showMobilePendingAnswerActions =
     isMobileViewport && !isComposerCollapsedMobile && pendingPrimaryAction !== null;
 
@@ -1745,12 +1749,12 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
         nudgeComposerMenuHighlight("ArrowUp");
         return true;
       }
-      if ((key === "Enter" || key === "Tab") && selectedItem) {
+      if (key === "Tab" && selectedItem) {
         onSelectComposerItem(selectedItem);
         return true;
       }
     }
-    if (key === "Enter" && !event.shiftKey) {
+    if (isComposerSubmitKey(event)) {
       submitComposer();
       return true;
     }
@@ -2381,6 +2385,15 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
               )}
 
             <div className="relative">
+              <div className="mb-2 flex min-w-0 items-center gap-1.5 text-muted-foreground text-xs leading-none">
+                <span className="shrink-0">Project:</span>
+                <span
+                  className="min-w-0 truncate font-medium text-foreground/80"
+                  title={composerProjectLabel}
+                >
+                  {composerProjectLabel}
+                </span>
+              </div>
               <ComposerPromptEditor
                 editorRef={composerEditorRef}
                 value={

@@ -11,6 +11,11 @@ export interface ComposerTrigger {
   rangeEnd: number;
 }
 
+export type ComposerSubmitKeyEvent = Pick<
+  KeyboardEvent,
+  "key" | "metaKey" | "ctrlKey" | "shiftKey"
+>;
+
 const isInlineTokenSegment = (
   segment:
     | { type: "text"; text: string }
@@ -214,6 +219,10 @@ export function isCollapsedCursorAdjacentToInlineToken(
 }
 
 export const isCollapsedCursorAdjacentToMention = isCollapsedCursorAdjacentToInlineToken;
+
+export function isComposerSubmitKey(event: ComposerSubmitKeyEvent): boolean {
+  return event.key === "Enter" && event.metaKey && !event.shiftKey;
+}
 
 export function detectComposerTrigger(text: string, cursorInput: number): ComposerTrigger | null {
   const cursor = clampCursor(text, cursorInput);

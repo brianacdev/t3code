@@ -5,6 +5,7 @@ import {
   collapseExpandedComposerCursor,
   detectComposerTrigger,
   expandCollapsedComposerCursor,
+  isComposerSubmitKey,
   isCollapsedCursorAdjacentToInlineToken,
   parseStandaloneComposerSlashCommand,
   replaceTextRange,
@@ -129,6 +130,23 @@ describe("detectComposerTrigger", () => {
     expect(trigger).not.toBeNull();
     expect(trigger?.kind).toBe("path");
     expect(trigger?.query).toBe("");
+  });
+});
+
+describe("isComposerSubmitKey", () => {
+  it("requires a submit modifier with Enter", () => {
+    expect(
+      isComposerSubmitKey({ key: "Enter", metaKey: true, ctrlKey: false, shiftKey: false }),
+    ).toBe(true);
+    expect(
+      isComposerSubmitKey({ key: "Enter", metaKey: false, ctrlKey: true, shiftKey: false }),
+    ).toBe(false);
+    expect(
+      isComposerSubmitKey({ key: "Enter", metaKey: false, ctrlKey: false, shiftKey: false }),
+    ).toBe(false);
+    expect(
+      isComposerSubmitKey({ key: "Enter", metaKey: true, ctrlKey: false, shiftKey: true }),
+    ).toBe(false);
   });
 });
 
