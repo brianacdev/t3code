@@ -1,7 +1,11 @@
 import { type EnvironmentConnectionPhase } from "@t3tools/client-runtime/connection";
+import type { EnvironmentThreadStatus } from "@t3tools/client-runtime/state/threads";
+import { useKeyboardChatComposerInset, useKeyboardScrollToEnd } from "@legendapp/list/keyboard";
+import type { LegendListRef } from "@legendapp/list/react-native";
 import type {
   ApprovalRequestId,
   EnvironmentId,
+  MessageId,
   ModelSelection,
   OrchestrationThreadShell,
   ProviderApprovalDecision,
@@ -12,9 +16,8 @@ import type {
 } from "@t3tools/contracts";
 import { formatElapsed } from "@t3tools/shared/orchestrationTiming";
 import * as Haptics from "expo-haptics";
-import { useHeaderHeight } from "expo-router/build/react-navigation/elements";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { View, type GestureResponderEvent, type LayoutChangeEvent } from "react-native";
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { View, type GestureResponderEvent } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { KeyboardStickyView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -24,8 +27,8 @@ import { AppText as Text } from "../../components/AppText";
 import type { ComposerEditorHandle } from "../../components/ComposerEditor";
 import type { StatusTone } from "../../components/StatusPill";
 import type { DraftComposerImageAttachment } from "../../lib/composerImages";
-import type { LayoutVariant } from "../../lib/layout";
-import { resolveThreadFeedBottomInset } from "../../lib/threadFeedLayout";
+import { CHAT_CONTENT_MAX_WIDTH, type LayoutVariant } from "../../lib/layout";
+import { scopedThreadKey } from "../../lib/scopedEntities";
 import type {
   PendingApproval,
   PendingUserInput,
@@ -59,6 +62,8 @@ export interface ThreadDetailScreenProps {
   readonly draftMessage: string;
   readonly draftAttachments: ReadonlyArray<DraftComposerImageAttachment>;
   readonly connectionStateLabel: EnvironmentConnectionPhase;
+  /** Message sync status for the selected thread (drives the composer status pill). */
+  readonly threadSyncStatus?: EnvironmentThreadStatus;
   readonly activeThreadBusy: boolean;
   readonly environmentId: EnvironmentId;
   readonly projectWorkspaceRoot: string | null;
@@ -66,6 +71,8 @@ export interface ThreadDetailScreenProps {
   readonly selectedThreadQueueCount: number;
   readonly serverConfig: T3ServerConfig | null;
   readonly layoutVariant?: LayoutVariant;
+  readonly usesAutomaticContentInsets?: boolean;
+  readonly onHeaderMaterialVisibilityChange?: (visible: boolean) => void;
   readonly onOpenDrawer: () => void;
   readonly onOpenConnectionEditor: () => void;
   readonly onChangeDraftMessage: (value: string) => void;
@@ -73,7 +80,7 @@ export interface ThreadDetailScreenProps {
   readonly onNativePasteImages: (uris: ReadonlyArray<string>) => Promise<void>;
   readonly onRemoveDraftImage: (imageId: string) => void;
   readonly onStopThread: () => void;
-  readonly onSendMessage: () => Promise<void>;
+  readonly onSendMessage: () => Promise<MessageId | null>;
   readonly onReconnectEnvironment: () => void;
   readonly onUpdateThreadModelSelection: (modelSelection: ModelSelection) => void;
   readonly onUpdateThreadRuntimeMode: (runtimeMode: RuntimeMode) => void;
@@ -204,27 +211,51 @@ export const ThreadDetailScreen = memo(function ThreadDetailScreen(props: Thread
   const { onOpenDrawer } = props;
 
   const insets = useSafeAreaInsets();
-  const headerHeight = useHeaderHeight();
   const agentLabel = `${props.selectedThread.modelSelection.instanceId} agent`;
-  const composerRef = useRef<ComposerEditorHandle>(null);
+  const selectedThreadKey = scopedThreadKey(props.environmentId, props.selectedThread.id);
+  const composerEditorRef = useRef<ComposerEditorHandle>(null);
+  const composerOverlayRef = useRef<View>(null);
+  const listRef = useRef<LegendListRef>(null);
   const feedTouchStartRef = useRef<{ pageX: number; pageY: number } | null>(null);
+  const selectedThreadKeyRef = useRef(selectedThreadKey);
+  const lastScrolledAnchorMessageIdRef = useRef<MessageId | null>(null);
   const [composerExpanded, setComposerExpanded] = useState(false);
+  const [anchorMessageId, setAnchorMessageId] = useState<MessageId | null>(null);
   const composerBottomInset = composerExpanded ? 0 : Math.max(insets.bottom, 12);
+  const contentPresentationKind = props.contentPresentation.kind;
+  // The raw sync status enters "synchronizing" on every full fetch, cached or
+  // not. Whether messages are already on screen decides the pill label: no
+  // data yet → "Loading messages", cached data reconciling → "Syncing".
+  const threadSyncPhase = (() => {
+    switch (props.threadSyncStatus) {
+      case "empty":
+      case "cached":
+      case "synchronizing":
+        if (contentPresentationKind === "ready") {
+          return "syncing" as const;
+        }
+        return contentPresentationKind === "loading" ? ("loading" as const) : null;
+      default:
+        return null;
+    }
+  })();
+  const selectedThreadFeed = props.selectedThreadFeed;
   const composerChrome = composerExpanded ? COMPOSER_EXPANDED_CHROME : COMPOSER_COLLAPSED_CHROME;
   const composerOverlapHeight = composerChrome + composerBottomInset;
   const activeWorkIndicatorHeight = props.activeWorkStartedAt ? WORKING_INDICATOR_HEIGHT : 0;
-  const estimatedOverlayHeight = composerOverlapHeight + activeWorkIndicatorHeight;
-  const [measuredOverlayHeight, setMeasuredOverlayHeight] = useState(0);
+  const estimatedOverlayHeight = composerOverlapHeight + activeWorkIndicatorHeight + 8;
+  const { contentInsetEndAdjustment, onComposerLayout } = useKeyboardChatComposerInset(
+    listRef,
+    composerOverlayRef,
+    estimatedOverlayHeight,
+  );
+  const { freeze, scrollMessageToEnd } = useKeyboardScrollToEnd({ listRef });
   const showContent = props.showContent ?? true;
   const layoutVariant = props.layoutVariant ?? "compact";
   const isSplitLayout = layoutVariant === "split";
+  const contentMaxWidth = isSplitLayout ? CHAT_CONTENT_MAX_WIDTH : undefined;
   const selectedInstanceId = props.selectedThread.modelSelection.instanceId;
   useStreamingHaptics(props.selectedThread.id, props.selectedThreadFeed);
-  const feedBottomInset = resolveThreadFeedBottomInset({
-    estimatedOverlayHeight,
-    measuredOverlayHeight,
-    gap: 8,
-  });
   const selectedProviderSkills = useMemo(
     () =>
       props.serverConfig?.providers.find((provider) => provider.instanceId === selectedInstanceId)
@@ -254,15 +285,67 @@ export const ThreadDetailScreen = memo(function ThreadDetailScreen(props: Thread
     [completeDrawerGesture, isSplitLayout],
   );
 
-  const handleOverlayLayout = useCallback((event: LayoutChangeEvent) => {
-    const nextHeight = Math.ceil(event.nativeEvent.layout.height);
-    setMeasuredOverlayHeight((current) =>
-      Math.abs(current - nextHeight) > 1 ? nextHeight : current,
-    );
-  }, []);
+  useLayoutEffect(() => {
+    selectedThreadKeyRef.current = selectedThreadKey;
+  }, [selectedThreadKey]);
+
+  useEffect(() => {
+    setAnchorMessageId(null);
+    lastScrolledAnchorMessageIdRef.current = null;
+    freeze.set(false);
+  }, [freeze, selectedThreadKey]);
+
+  useEffect(() => {
+    if (
+      anchorMessageId === null ||
+      lastScrolledAnchorMessageIdRef.current === anchorMessageId ||
+      contentPresentationKind !== "ready" ||
+      !selectedThreadFeed.some((entry) => entry.type === "message" && entry.id === anchorMessageId)
+    ) {
+      return;
+    }
+
+    const targetThreadKey = selectedThreadKey;
+    const frame = requestAnimationFrame(() => {
+      if (selectedThreadKeyRef.current !== targetThreadKey) {
+        return;
+      }
+      lastScrolledAnchorMessageIdRef.current = anchorMessageId;
+      void scrollMessageToEnd({ animated: true, closeKeyboard: false }).catch(() => {
+        if (
+          selectedThreadKeyRef.current !== targetThreadKey ||
+          lastScrolledAnchorMessageIdRef.current !== anchorMessageId
+        ) {
+          return;
+        }
+        lastScrolledAnchorMessageIdRef.current = null;
+        freeze.set(false);
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [
+    anchorMessageId,
+    freeze,
+    contentPresentationKind,
+    selectedThreadFeed,
+    scrollMessageToEnd,
+    selectedThreadKey,
+  ]);
+
+  const handleSendMessage = useCallback(async () => {
+    const targetThreadKey = selectedThreadKey;
+    const messageId = await props.onSendMessage();
+    if (messageId === null || selectedThreadKeyRef.current !== targetThreadKey) {
+      return messageId;
+    }
+
+    setAnchorMessageId(messageId);
+    composerEditorRef.current?.blur();
+    return messageId;
+  }, [props.onSendMessage, selectedThreadKey]);
 
   const collapseComposer = useCallback(() => {
-    composerRef.current?.blur();
+    composerEditorRef.current?.blur();
   }, []);
 
   const handleFeedTouchStart = useCallback((event: GestureResponderEvent) => {
@@ -315,10 +398,16 @@ export const ThreadDetailScreen = memo(function ThreadDetailScreen(props: Thread
               contentPresentation={props.contentPresentation}
               agentLabel={agentLabel}
               latestTurn={props.selectedThread.latestTurn}
-              contentTopInset={headerHeight}
-              contentBottomInset={feedBottomInset}
+              listRef={listRef}
+              freeze={freeze}
+              anchorMessageId={anchorMessageId}
+              contentInsetEndAdjustment={contentInsetEndAdjustment}
+              contentTopInset={0}
+              contentBottomInset={estimatedOverlayHeight}
+              contentMaxWidth={contentMaxWidth}
               layoutVariant={layoutVariant}
-              composerExpanded={composerExpanded}
+              usesAutomaticContentInsets={props.usesAutomaticContentInsets}
+              onHeaderMaterialVisibilityChange={props.onHeaderMaterialVisibilityChange}
               skills={selectedProviderSkills}
             />
           </View>
@@ -332,42 +421,50 @@ export const ThreadDetailScreen = memo(function ThreadDetailScreen(props: Thread
             style={{ position: "absolute", bottom: 0, left: 0, right: 0 }}
             offset={{ closed: 0, opened: 0 }}
           >
-            <View onLayout={handleOverlayLayout}>
-              {props.activeWorkStartedAt ? (
-                <WorkingDurationPill startedAt={props.activeWorkStartedAt} />
-              ) : null}
+            <View
+              ref={composerOverlayRef}
+              onLayout={onComposerLayout}
+              style={{ width: "100%", paddingTop: 8 }}
+            >
+              <View style={{ alignSelf: "center", maxWidth: contentMaxWidth, width: "100%" }}>
+                {props.activeWorkStartedAt ? (
+                  <WorkingDurationPill startedAt={props.activeWorkStartedAt} />
+                ) : null}
 
-              {props.activePendingApproval || props.activePendingUserInput ? (
-                <View className="gap-3 px-4 pb-3" style={{ flexShrink: 0 }}>
-                  {props.activePendingApproval ? (
-                    <PendingApprovalCard
-                      approval={props.activePendingApproval}
-                      respondingApprovalId={props.respondingApprovalId}
-                      onRespond={props.onRespondToApproval}
-                    />
-                  ) : null}
-                  {props.activePendingUserInput ? (
-                    <PendingUserInputCard
-                      pendingUserInput={props.activePendingUserInput}
-                      drafts={props.activePendingUserInputDrafts}
-                      answers={props.activePendingUserInputAnswers}
-                      respondingUserInputId={props.respondingUserInputId}
-                      onSelectOption={props.onSelectUserInputOption}
-                      onChangeCustomAnswer={props.onChangeUserInputCustomAnswer}
-                      onSubmit={props.onSubmitUserInput}
-                    />
-                  ) : null}
-                </View>
-              ) : null}
+                {props.activePendingApproval || props.activePendingUserInput ? (
+                  <View className="gap-3 px-4 pb-3" style={{ flexShrink: 0 }}>
+                    {props.activePendingApproval ? (
+                      <PendingApprovalCard
+                        approval={props.activePendingApproval}
+                        respondingApprovalId={props.respondingApprovalId}
+                        onRespond={props.onRespondToApproval}
+                      />
+                    ) : null}
+                    {props.activePendingUserInput ? (
+                      <PendingUserInputCard
+                        pendingUserInput={props.activePendingUserInput}
+                        drafts={props.activePendingUserInputDrafts}
+                        answers={props.activePendingUserInputAnswers}
+                        respondingUserInputId={props.respondingUserInputId}
+                        onSelectOption={props.onSelectUserInputOption}
+                        onChangeCustomAnswer={props.onChangeUserInputCustomAnswer}
+                        onSubmit={props.onSubmitUserInput}
+                      />
+                    ) : null}
+                  </View>
+                ) : null}
+              </View>
 
               <ThreadComposer
-                editorRef={composerRef}
+                editorRef={composerEditorRef}
                 draftMessage={props.draftMessage}
                 draftAttachments={props.draftAttachments}
                 placeholder="Ask the repo agent, or run a command…"
+                contentMaxWidth={contentMaxWidth}
                 connectionState={props.connectionStateLabel}
                 connectionError={props.connectionError}
                 environmentLabel={props.environmentLabel}
+                threadSyncPhase={threadSyncPhase}
                 selectedThread={props.selectedThread}
                 serverConfig={props.serverConfig}
                 queueCount={props.selectedThreadQueueCount}
@@ -380,7 +477,7 @@ export const ThreadDetailScreen = memo(function ThreadDetailScreen(props: Thread
                 onNativePasteImages={props.onNativePasteImages}
                 onRemoveDraftImage={props.onRemoveDraftImage}
                 onStopThread={props.onStopThread}
-                onSendMessage={props.onSendMessage}
+                onSendMessage={handleSendMessage}
                 onReconnectEnvironment={props.onReconnectEnvironment}
                 onUpdateModelSelection={props.onUpdateThreadModelSelection}
                 onUpdateRuntimeMode={props.onUpdateThreadRuntimeMode}
