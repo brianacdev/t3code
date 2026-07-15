@@ -491,6 +491,7 @@ export interface ChatComposerProps {
   activeThreadActivities: Thread["activities"] | undefined;
 
   // Misc
+  activeProjectTitle: string | null;
   resolvedTheme: "light" | "dark";
   settings: UnifiedSettings;
   keybindings: ResolvedKeybindingsConfig;
@@ -579,6 +580,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
     activeProjectDefaultModelSelection,
     activeThreadModelSelection,
     activeThreadActivities,
+    activeProjectTitle,
     resolvedTheme,
     settings,
     keybindings,
@@ -1750,7 +1752,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
         return true;
       }
     }
-    if (key === "Enter" && !event.shiftKey) {
+    if (key === "Enter" && event.metaKey) {
       submitComposer();
       return true;
     }
@@ -2239,6 +2241,11 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
               isComposerCollapsedMobile && "hidden",
             )}
           >
+            {activeProjectTitle && (
+              <div className="mb-1.5 truncate text-xs text-muted-foreground">
+                {activeProjectTitle}
+              </div>
+            )}
             {composerMenuOpen && !isComposerApprovalState && (
               <div className="absolute inset-x-0 bottom-full z-20 mb-2">
                 <ComposerCommandMenu
