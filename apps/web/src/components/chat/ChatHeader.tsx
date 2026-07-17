@@ -86,6 +86,9 @@ export const ChatHeader = memo(function ChatHeader({
                 aria-label={activeThreadTitle}
                 className="min-w-0 flex-1 truncate text-sm font-medium text-foreground"
               >
+                {activeProjectName && (
+                  <span className="text-muted-foreground">{activeProjectName} / </span>
+                )}
                 {activeThreadTitle}
               </h2>
             }

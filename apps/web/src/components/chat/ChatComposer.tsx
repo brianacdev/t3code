@@ -1750,7 +1750,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
         return true;
       }
     }
-    if (key === "Enter" && !event.shiftKey) {
+    if (key === "Enter" && event.metaKey) {
       submitComposer();
       return true;
     }
