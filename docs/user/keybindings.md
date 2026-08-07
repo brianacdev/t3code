@@ -89,5 +89,5 @@ Examples:
 By default, Enter sends the message you are composing and Shift+Enter inserts a newline. If you
 prefer Enter to insert newlines, turn off **Enter to send** in **Settings** → **General**; the
 composer then sends only when Enter is combined with a modifier key. Choose that key with the
-**Send modifier** setting next to it — Shift, Alt/Option, Ctrl, Cmd (⌘), or any modifier. These
-are per-device preferences, not keybinding rules.
+**Send modifier** setting that appears below the toggle — Shift, Alt/Option, Ctrl, Cmd (⌘), or
+any modifier. These are per-device preferences, not keybinding rules.

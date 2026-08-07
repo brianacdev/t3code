@@ -124,6 +124,9 @@ export const SETTINGS_SEARCH_ITEMS = [
     id: "send-modifier",
     title: "Send modifier",
     to: "/settings/general",
+    // The row only renders while "Enter to send" is off, so its parent
+    // setting is the stable scroll destination.
+    targetId: "enter-to-send",
   },
   {
     id: "provider-update-checks",

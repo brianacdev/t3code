@@ -1736,60 +1736,61 @@ export function GeneralSettingsPanel() {
           }
         />
 
-        <SettingsRow
-          {...searchableSetting("send-modifier")}
-          description="Modifier key that combines with Enter to send messages while Enter to send is off."
-          resetAction={
-            settings.composerSendModifier !== DEFAULT_UNIFIED_SETTINGS.composerSendModifier ? (
-              <SettingResetButton
-                label="send modifier"
-                onClick={() =>
-                  updateSettings({
-                    composerSendModifier: DEFAULT_UNIFIED_SETTINGS.composerSendModifier,
-                  })
-                }
-              />
-            ) : null
-          }
-          control={
-            <Select
-              value={settings.composerSendModifier}
-              disabled={settings.composerEnterToSend}
-              onValueChange={(value) => {
-                if (
-                  value === "any" ||
-                  value === "shift" ||
-                  value === "alt" ||
-                  value === "ctrl" ||
-                  value === "meta"
-                ) {
-                  updateSettings({ composerSendModifier: value });
-                }
-              }}
-            >
-              <SelectTrigger className="w-full sm:w-40" aria-label="Send modifier key">
-                <SelectValue>{sendModifierLabels[settings.composerSendModifier]}</SelectValue>
-              </SelectTrigger>
-              <SelectPopup align="end" alignItemWithTrigger={false}>
-                <SelectItem hideIndicator value="shift">
-                  {sendModifierLabels.shift}
-                </SelectItem>
-                <SelectItem hideIndicator value="alt">
-                  {sendModifierLabels.alt}
-                </SelectItem>
-                <SelectItem hideIndicator value="ctrl">
-                  {sendModifierLabels.ctrl}
-                </SelectItem>
-                <SelectItem hideIndicator value="meta">
-                  {sendModifierLabels.meta}
-                </SelectItem>
-                <SelectItem hideIndicator value="any">
-                  {sendModifierLabels.any}
-                </SelectItem>
-              </SelectPopup>
-            </Select>
-          }
-        />
+        {settings.composerEnterToSend ? null : (
+          <SettingsRow
+            {...searchableSetting("send-modifier")}
+            description="Modifier key that combines with Enter to send messages."
+            resetAction={
+              settings.composerSendModifier !== DEFAULT_UNIFIED_SETTINGS.composerSendModifier ? (
+                <SettingResetButton
+                  label="send modifier"
+                  onClick={() =>
+                    updateSettings({
+                      composerSendModifier: DEFAULT_UNIFIED_SETTINGS.composerSendModifier,
+                    })
+                  }
+                />
+              ) : null
+            }
+            control={
+              <Select
+                value={settings.composerSendModifier}
+                onValueChange={(value) => {
+                  if (
+                    value === "any" ||
+                    value === "shift" ||
+                    value === "alt" ||
+                    value === "ctrl" ||
+                    value === "meta"
+                  ) {
+                    updateSettings({ composerSendModifier: value });
+                  }
+                }}
+              >
+                <SelectTrigger className="w-full sm:w-40" aria-label="Send modifier key">
+                  <SelectValue>{sendModifierLabels[settings.composerSendModifier]}</SelectValue>
+                </SelectTrigger>
+                <SelectPopup align="end" alignItemWithTrigger={false}>
+                  <SelectItem hideIndicator value="shift">
+                    {sendModifierLabels.shift}
+                  </SelectItem>
+                  <SelectItem hideIndicator value="alt">
+                    {sendModifierLabels.alt}
+                  </SelectItem>
+                  <SelectItem hideIndicator value="ctrl">
+                    {sendModifierLabels.ctrl}
+                  </SelectItem>
+                  <SelectItem hideIndicator value="meta">
+                    {sendModifierLabels.meta}
+                  </SelectItem>
+                  <SelectItem hideIndicator value="any">
+                    {sendModifierLabels.any}
+                  </SelectItem>
+                </SelectPopup>
+              </Select>
+            }
+          />
+        )}
 
         <SettingsRow
           {...searchableSetting("provider-update-checks")}
