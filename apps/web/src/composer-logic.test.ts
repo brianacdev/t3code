@@ -13,16 +13,105 @@ import {
 import { INLINE_TERMINAL_CONTEXT_PLACEHOLDER } from "./lib/terminalContext";
 
 describe("shouldSubmitComposerOnEnter", () => {
+  const base = {
+    isMobileViewport: false,
+    shiftKey: false,
+    altKey: false,
+    ctrlKey: false,
+    metaKey: false,
+    enterToSend: true,
+    sendModifier: "any",
+  } as const;
+
   it("submits plain Enter on desktop", () => {
-    expect(shouldSubmitComposerOnEnter({ isMobileViewport: false, shiftKey: false })).toBe(true);
+    expect(shouldSubmitComposerOnEnter(base)).toBe(true);
   });
 
   it("inserts a newline for plain Enter on mobile", () => {
-    expect(shouldSubmitComposerOnEnter({ isMobileViewport: true, shiftKey: false })).toBe(false);
+    expect(shouldSubmitComposerOnEnter({ ...base, isMobileViewport: true })).toBe(false);
   });
 
   it("inserts a newline for Shift+Enter", () => {
-    expect(shouldSubmitComposerOnEnter({ isMobileViewport: false, shiftKey: true })).toBe(false);
+    expect(shouldSubmitComposerOnEnter({ ...base, shiftKey: true })).toBe(false);
+  });
+
+  it("inserts a newline for plain Enter when Enter-to-send is off", () => {
+    expect(shouldSubmitComposerOnEnter({ ...base, enterToSend: false })).toBe(false);
+  });
+
+  it("submits any modifier+Enter when Enter-to-send is off", () => {
+    expect(shouldSubmitComposerOnEnter({ ...base, enterToSend: false, metaKey: true })).toBe(true);
+    expect(shouldSubmitComposerOnEnter({ ...base, enterToSend: false, ctrlKey: true })).toBe(true);
+    expect(shouldSubmitComposerOnEnter({ ...base, enterToSend: false, altKey: true })).toBe(true);
+    expect(shouldSubmitComposerOnEnter({ ...base, enterToSend: false, shiftKey: true })).toBe(true);
+  });
+
+  it("submits only the chosen modifier+Enter when Enter-to-send is off", () => {
+    expect(
+      shouldSubmitComposerOnEnter({
+        ...base,
+        enterToSend: false,
+        sendModifier: "meta",
+        metaKey: true,
+      }),
+    ).toBe(true);
+    expect(
+      shouldSubmitComposerOnEnter({
+        ...base,
+        enterToSend: false,
+        sendModifier: "meta",
+        ctrlKey: true,
+      }),
+    ).toBe(false);
+    expect(
+      shouldSubmitComposerOnEnter({
+        ...base,
+        enterToSend: false,
+        sendModifier: "shift",
+        shiftKey: true,
+      }),
+    ).toBe(true);
+    expect(
+      shouldSubmitComposerOnEnter({
+        ...base,
+        enterToSend: false,
+        sendModifier: "ctrl",
+        ctrlKey: true,
+      }),
+    ).toBe(true);
+    expect(
+      shouldSubmitComposerOnEnter({
+        ...base,
+        enterToSend: false,
+        sendModifier: "alt",
+        altKey: true,
+      }),
+    ).toBe(true);
+    expect(
+      shouldSubmitComposerOnEnter({
+        ...base,
+        enterToSend: false,
+        sendModifier: "alt",
+        metaKey: true,
+      }),
+    ).toBe(false);
+  });
+
+  it("ignores the send modifier while Enter-to-send is on", () => {
+    expect(shouldSubmitComposerOnEnter({ ...base, sendModifier: "meta", ctrlKey: true })).toBe(
+      true,
+    );
+  });
+
+  it("inserts a newline for modifier+Enter on mobile", () => {
+    expect(
+      shouldSubmitComposerOnEnter({
+        ...base,
+        isMobileViewport: true,
+        enterToSend: false,
+        metaKey: true,
+      }),
+    ).toBe(false);
   });
 });
 

@@ -110,7 +110,19 @@ export const DEFAULT_ENVIRONMENT_IDENTIFICATION_MODE: EnvironmentIdentificationM
 export const FontFamilyPreference = Schema.String.check(Schema.isMaxLength(200));
 export type FontFamilyPreference = typeof FontFamilyPreference.Type;
 
+export const ComposerSendModifier = Schema.Literals(["any", "shift", "alt", "ctrl", "meta"]);
+export type ComposerSendModifier = typeof ComposerSendModifier.Type;
+export const DEFAULT_COMPOSER_SEND_MODIFIER: ComposerSendModifier = "any";
+
 export const ClientSettingsSchema = Schema.Struct({
+  // Whether plain Enter submits the composer. When off, Enter inserts a
+  // newline and `composerSendModifier`+Enter submits instead.
+  composerEnterToSend: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
+  // Which modifier key combines with Enter to submit when
+  // `composerEnterToSend` is off. Ignored while `composerEnterToSend` is on.
+  composerSendModifier: ComposerSendModifier.pipe(
+    Schema.withDecodingDefault(Effect.succeed(DEFAULT_COMPOSER_SEND_MODIFIER)),
+  ),
   confirmThreadArchive: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(false))),
   confirmThreadDelete: Schema.Boolean.pipe(Schema.withDecodingDefault(Effect.succeed(true))),
   dismissedProviderUpdateNotificationKeys: Schema.Array(TrimmedNonEmptyString).pipe(
@@ -750,6 +762,8 @@ export const ServerSettingsPatch = Schema.Struct({
 export type ServerSettingsPatch = typeof ServerSettingsPatch.Type;
 
 export const ClientSettingsPatch = Schema.Struct({
+  composerEnterToSend: Schema.optionalKey(Schema.Boolean),
+  composerSendModifier: Schema.optionalKey(ComposerSendModifier),
   confirmThreadArchive: Schema.optionalKey(Schema.Boolean),
   confirmThreadDelete: Schema.optionalKey(Schema.Boolean),
   diffIgnoreWhitespace: Schema.optionalKey(Schema.Boolean),

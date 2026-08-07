@@ -1,3 +1,5 @@
+import type { ComposerSendModifier } from "@t3tools/contracts/settings";
+
 import { splitPromptIntoComposerSegments } from "./composer-editor-mentions";
 import { INLINE_TERMINAL_CONTEXT_PLACEHOLDER } from "./lib/terminalContext";
 
@@ -14,8 +16,30 @@ export interface ComposerTrigger {
 export function shouldSubmitComposerOnEnter(input: {
   isMobileViewport: boolean;
   shiftKey: boolean;
+  altKey: boolean;
+  ctrlKey: boolean;
+  metaKey: boolean;
+  enterToSend: boolean;
+  sendModifier: ComposerSendModifier;
 }): boolean {
-  return !input.isMobileViewport && !input.shiftKey;
+  if (input.isMobileViewport) {
+    return false;
+  }
+  if (input.enterToSend) {
+    return !input.shiftKey;
+  }
+  switch (input.sendModifier) {
+    case "any":
+      return input.shiftKey || input.altKey || input.ctrlKey || input.metaKey;
+    case "shift":
+      return input.shiftKey;
+    case "alt":
+      return input.altKey;
+    case "ctrl":
+      return input.ctrlKey;
+    case "meta":
+      return input.metaKey;
+  }
 }
 
 const isInlineTokenSegment = (

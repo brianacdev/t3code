@@ -33,6 +33,20 @@ describe("ClientSettings word wrap", () => {
   });
 });
 
+describe("ClientSettings Enter to send", () => {
+  it("defaults Enter to send on", () => {
+    expect(decodeClientSettings({}).composerEnterToSend).toBe(true);
+  });
+
+  it("defaults the send modifier to any", () => {
+    expect(decodeClientSettings({}).composerSendModifier).toBe("any");
+  });
+
+  it("rejects unknown send modifiers", () => {
+    expect(() => decodeClientSettings({ composerSendModifier: "hyper" })).toThrow();
+  });
+});
+
 describe("ClientSettings glass opacity", () => {
   it("defaults to a readable translucent surface", () => {
     expect(decodeClientSettings({}).glassOpacity).toBe(80);

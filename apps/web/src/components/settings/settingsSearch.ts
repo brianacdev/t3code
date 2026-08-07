@@ -116,6 +116,16 @@ export const SETTINGS_SEARCH_ITEMS = [
     to: "/settings/general",
   },
   {
+    id: "enter-to-send",
+    title: "Enter to send",
+    to: "/settings/general",
+  },
+  {
+    id: "send-modifier",
+    title: "Send modifier",
+    to: "/settings/general",
+  },
+  {
     id: "provider-update-checks",
     title: "Provider update checks",
     to: "/settings/general",

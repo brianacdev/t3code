@@ -83,3 +83,11 @@ Examples:
 - For a key event, the last rule where both `key` matches and `when` evaluates to `true` wins.
 - Precedence is across commands, not only within the same command. A later rule for a different
   command can take a key away from an earlier one.
+
+## Sending Messages With Enter
+
+By default, Enter sends the message you are composing and Shift+Enter inserts a newline. If you
+prefer Enter to insert newlines, turn off **Enter to send** in **Settings** → **General**; the
+composer then sends only when Enter is combined with a modifier key. Choose that key with the
+**Send modifier** setting next to it — Shift, Alt/Option, Ctrl, Cmd (⌘), or any modifier. These
+are per-device preferences, not keybinding rules.

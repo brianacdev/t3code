@@ -17,6 +17,7 @@ import {
   squashAtomCommandFailure,
 } from "@t3tools/client-runtime/state/runtime";
 import {
+  type ComposerSendModifier,
   DEFAULT_ENVIRONMENT_IDENTIFICATION_MODE,
   DEFAULT_UNIFIED_SETTINGS,
   type EnvironmentIdentificationMode,
@@ -476,6 +477,12 @@ export function useSettingsRestore(onRestored?: () => void) {
       ...(settings.diffIgnoreWhitespace !== DEFAULT_UNIFIED_SETTINGS.diffIgnoreWhitespace
         ? ["Diff whitespace changes"]
         : []),
+      ...(settings.composerEnterToSend !== DEFAULT_UNIFIED_SETTINGS.composerEnterToSend
+        ? ["Enter to send"]
+        : []),
+      ...(settings.composerSendModifier !== DEFAULT_UNIFIED_SETTINGS.composerSendModifier
+        ? ["Send modifier"]
+        : []),
       ...(settings.enableAssistantStreaming !== DEFAULT_UNIFIED_SETTINGS.enableAssistantStreaming
         ? ["Assistant output"]
         : []),
@@ -505,6 +512,8 @@ export function useSettingsRestore(onRestored?: () => void) {
     [
       isTextGenerationModelDirty,
       isBackgroundActivityDirty,
+      settings.composerEnterToSend,
+      settings.composerSendModifier,
       settings.confirmThreadArchive,
       settings.confirmThreadDelete,
       settings.addProjectBaseDirectory,
@@ -596,6 +605,8 @@ export function useSettingsRestore(onRestored?: () => void) {
     updateSettings({
       timestampFormat: DEFAULT_UNIFIED_SETTINGS.timestampFormat,
       wordWrap: DEFAULT_UNIFIED_SETTINGS.wordWrap,
+      composerEnterToSend: DEFAULT_UNIFIED_SETTINGS.composerEnterToSend,
+      composerSendModifier: DEFAULT_UNIFIED_SETTINGS.composerSendModifier,
       diffIgnoreWhitespace: DEFAULT_UNIFIED_SETTINGS.diffIgnoreWhitespace,
       environmentIdentificationMode: DEFAULT_UNIFIED_SETTINGS.environmentIdentificationMode,
       glassOpacity: DEFAULT_UNIFIED_SETTINGS.glassOpacity,
@@ -1556,6 +1567,14 @@ export function GeneralSettingsPanel() {
     settings.backgroundActivity,
     DEFAULT_UNIFIED_SETTINGS.backgroundActivity,
   );
+  const isMac = typeof navigator !== "undefined" && isMacPlatform(navigator.platform);
+  const sendModifierLabels: Record<ComposerSendModifier, string> = {
+    any: "Any modifier",
+    shift: "Shift",
+    alt: isMac ? "Option (⌥)" : "Alt",
+    ctrl: isMac ? "Control (⌃)" : "Ctrl",
+    meta: isMac ? "Command (⌘)" : "Meta",
+  };
 
   return (
     <SettingsPageContainer>
@@ -1688,6 +1707,87 @@ export function GeneralSettingsPanel() {
               }
               aria-label="Stream assistant messages"
             />
+          }
+        />
+
+        <SettingsRow
+          {...searchableSetting("enter-to-send")}
+          description="When off, Enter inserts a newline and the send modifier + Enter sends the message."
+          resetAction={
+            settings.composerEnterToSend !== DEFAULT_UNIFIED_SETTINGS.composerEnterToSend ? (
+              <SettingResetButton
+                label="Enter to send"
+                onClick={() =>
+                  updateSettings({
+                    composerEnterToSend: DEFAULT_UNIFIED_SETTINGS.composerEnterToSend,
+                  })
+                }
+              />
+            ) : null
+          }
+          control={
+            <Switch
+              checked={settings.composerEnterToSend}
+              onCheckedChange={(checked) =>
+                updateSettings({ composerEnterToSend: Boolean(checked) })
+              }
+              aria-label="Send messages with Enter"
+            />
+          }
+        />
+
+        <SettingsRow
+          {...searchableSetting("send-modifier")}
+          description="Modifier key that combines with Enter to send messages while Enter to send is off."
+          resetAction={
+            settings.composerSendModifier !== DEFAULT_UNIFIED_SETTINGS.composerSendModifier ? (
+              <SettingResetButton
+                label="send modifier"
+                onClick={() =>
+                  updateSettings({
+                    composerSendModifier: DEFAULT_UNIFIED_SETTINGS.composerSendModifier,
+                  })
+                }
+              />
+            ) : null
+          }
+          control={
+            <Select
+              value={settings.composerSendModifier}
+              disabled={settings.composerEnterToSend}
+              onValueChange={(value) => {
+                if (
+                  value === "any" ||
+                  value === "shift" ||
+                  value === "alt" ||
+                  value === "ctrl" ||
+                  value === "meta"
+                ) {
+                  updateSettings({ composerSendModifier: value });
+                }
+              }}
+            >
+              <SelectTrigger className="w-full sm:w-40" aria-label="Send modifier key">
+                <SelectValue>{sendModifierLabels[settings.composerSendModifier]}</SelectValue>
+              </SelectTrigger>
+              <SelectPopup align="end" alignItemWithTrigger={false}>
+                <SelectItem hideIndicator value="shift">
+                  {sendModifierLabels.shift}
+                </SelectItem>
+                <SelectItem hideIndicator value="alt">
+                  {sendModifierLabels.alt}
+                </SelectItem>
+                <SelectItem hideIndicator value="ctrl">
+                  {sendModifierLabels.ctrl}
+                </SelectItem>
+                <SelectItem hideIndicator value="meta">
+                  {sendModifierLabels.meta}
+                </SelectItem>
+                <SelectItem hideIndicator value="any">
+                  {sendModifierLabels.any}
+                </SelectItem>
+              </SelectPopup>
+            </Select>
           }
         />
 
